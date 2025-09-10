@@ -1,0 +1,1562 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学生图片上传与点评系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* 邀请码模态框样式 */
+        .invite-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .invite-modal.hidden {
+            display: none;
+        }
+
+        .invite-content {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .invite-content h2 {
+            color: #2c2c2c;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .invite-content p {
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+
+        .invite-input {
+            width: 100%;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1.1em;
+            text-align: center;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .invite-input:focus {
+            outline: none;
+            border-color: #2c2c2c;
+            box-shadow: 0 0 0 2px rgba(44, 44, 44, 0.1);
+        }
+
+        .invite-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .invite-btn {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .invite-btn-primary {
+            background: #2c2c2c;
+            color: white;
+        }
+
+        .invite-btn-primary:hover {
+            background: #1a1a1a;
+        }
+
+        .invite-btn-secondary {
+            background: #f5f5f5;
+            color: #666;
+        }
+
+        .invite-btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .invite-codes-hint {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .invite-codes-hint strong {
+             color: #2c2c2c;
+         }
+
+         /* 学生信息显示区域样式 */
+         .student-info-display {
+             background: #f8f9fa;
+             border: 1px solid #e0e0e0;
+             border-radius: 8px;
+             padding: 20px;
+             margin-bottom: 30px;
+         }
+
+         .info-item {
+             display: flex;
+             align-items: center;
+             margin-bottom: 10px;
+         }
+
+         .info-item:last-child {
+             margin-bottom: 0;
+         }
+
+         .info-label {
+             font-weight: 600;
+             color: #2c2c2c;
+             min-width: 80px;
+         }
+
+         .info-value {
+             color: #666;
+             font-size: 1.1em;
+         }
+
+         /* 图片放大查看模态框样式 */
+         .image-modal {
+             position: fixed;
+             top: 0;
+             left: 0;
+             width: 100%;
+             height: 100%;
+             background: rgba(0, 0, 0, 0.9);
+             display: flex;
+             justify-content: center;
+             align-items: center;
+             z-index: 2000;
+             opacity: 0;
+             visibility: hidden;
+             transition: all 0.3s ease;
+         }
+
+         .image-modal.show {
+             opacity: 1;
+             visibility: visible;
+         }
+
+         .image-modal-content {
+             position: relative;
+             max-width: 90%;
+             max-height: 90%;
+             transform: scale(0.8);
+             transition: transform 0.3s ease;
+         }
+
+         .image-modal.show .image-modal-content {
+             transform: scale(1);
+         }
+
+         .image-modal img {
+             width: 100%;
+             height: 100%;
+             object-fit: contain;
+             border-radius: 8px;
+             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+         }
+
+         .image-modal-close {
+             position: absolute;
+             top: -40px;
+             right: 0;
+             background: rgba(255, 255, 255, 0.9);
+             color: #333;
+             border: none;
+             width: 40px;
+             height: 40px;
+             border-radius: 50%;
+             font-size: 20px;
+             cursor: pointer;
+             display: flex;
+             align-items: center;
+             justify-content: center;
+             transition: all 0.3s ease;
+         }
+
+         .image-modal-close:hover {
+             background: white;
+             transform: scale(1.1);
+         }
+
+         .image-modal-info {
+             position: absolute;
+             bottom: -60px;
+             left: 0;
+             right: 0;
+             background: rgba(255, 255, 255, 0.95);
+             padding: 15px;
+             border-radius: 8px;
+             text-align: center;
+         }
+
+         .image-modal-info h4 {
+             margin: 0 0 5px 0;
+             color: #2c2c2c;
+         }
+
+         .image-modal-info p {
+             margin: 0;
+             color: #666;
+             font-size: 0.9em;
+         }
+
+         /* 图片卡片悬停效果 */
+         .image-card img {
+             cursor: pointer;
+             transition: transform 0.3s ease;
+         }
+
+         .image-card img:hover {
+             transform: scale(1.05);
+         }
+
+         /* 点赞按钮样式 */
+         .like-section {
+             display: flex;
+             align-items: center;
+             justify-content: space-between;
+             margin-top: 15px;
+             padding-top: 15px;
+             border-top: 1px solid #e9ecef;
+         }
+
+         .like-button {
+             display: flex;
+             align-items: center;
+             gap: 5px;
+             background: none;
+             border: 1px solid #ddd;
+             padding: 8px 12px;
+             border-radius: 20px;
+             cursor: pointer;
+             transition: all 0.3s ease;
+             font-size: 0.9em;
+         }
+
+         .like-button:hover {
+             background: #f8f9fa;
+             border-color: #ff6b6b;
+             color: #ff6b6b;
+         }
+
+         .like-button.liked {
+             background: #ff6b6b;
+             border-color: #ff6b6b;
+             color: white;
+         }
+
+         .like-button.liked:hover {
+             background: #ff5252;
+             border-color: #ff5252;
+         }
+
+         .like-count {
+             color: #666;
+             font-size: 0.9em;
+             margin-left: 5px;
+         }
+
+         .like-icon {
+             font-size: 1.1em;
+         }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            overflow: hidden;
+            border: 1px solid #e0e0e0;
+        }
+
+        .header {
+            background: #2c2c2c;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            background: #f8f9fa;
+            border: none;
+            font-size: 1.1em;
+            font-weight: 500;
+            color: #6c757d;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            background: white;
+            color: #2c2c2c;
+            border-bottom: 3px solid #2c2c2c;
+        }
+
+        .tab:hover {
+            background: #e9ecef;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* 学生上传区域样式 */
+        .upload-area {
+            border: 2px dashed #666;
+            border-radius: 8px;
+            padding: 60px 20px;
+            text-align: center;
+            background: #fafafa;
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            border-color: #333;
+            background: #f0f0f0;
+        }
+
+        .upload-area.dragover {
+            border-color: #000;
+            background: #e8e8e8;
+        }
+
+        .upload-icon {
+            font-size: 4em;
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1em;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #333;
+            box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn {
+            background: #2c2c2c;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 4px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .btn:hover {
+            background: #1a1a1a;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* 图片展示区域 */
+        .images-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+
+        .image-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border: 1px solid #e0e0e0;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .image-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .image-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+
+        .card-content {
+            padding: 20px;
+        }
+
+        .student-info {
+            margin-bottom: 15px;
+        }
+
+        .student-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .student-id {
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+
+        .upload-time {
+            color: #6c757d;
+            font-size: 0.8em;
+            margin-bottom: 15px;
+        }
+
+        .review-section {
+            border-top: 1px solid #e9ecef;
+            padding-top: 15px;
+        }
+
+        .score-input {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .score-input input {
+            width: 80px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .score-display {
+            background: #2c2c2c;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 4px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .comment-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            resize: vertical;
+            min-height: 80px;
+            margin-bottom: 15px;
+        }
+
+        .comment-display {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            border-left: 4px solid #2c2c2c;
+        }
+
+        .teacher-info {
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 0.9em;
+            width: auto;
+            margin-right: 10px;
+        }
+
+        .btn-danger {
+            background: #666;
+        }
+
+        .btn-danger:hover {
+            background: #555;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #2c2c2c;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .gallery-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #fafafa;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .gallery-header h3 {
+            color: #2c2c2c;
+            margin-bottom: 10px;
+            font-size: 1.5em;
+        }
+
+        .gallery-header p {
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .user-role-selector {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .user-role-selector label {
+            font-weight: 600;
+            color: #2c2c2c;
+        }
+
+        .user-role-selector select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 10px;
+            }
+            
+            .header {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .images-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .tabs {
+                flex-direction: column;
+            }
+            
+            .user-role-selector {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 邀请码验证模态框 -->
+    <div id="invite-modal" class="invite-modal">
+        <div class="invite-content">
+            <h2>👨‍🎓 学生登录</h2>
+            <p>请输入您的姓名和学号</p>
+            
+            <input type="text" id="student-name-input" class="invite-input" placeholder="请输入学生姓名" maxlength="20">
+            <input type="text" id="student-id-input" class="invite-input" placeholder="请输入学号" maxlength="20">
+            
+            <div class="invite-buttons">
+                <button class="invite-btn invite-btn-primary" onclick="studentLogin()">登录</button>
+            </div>
+            
+            <div id="invite-alert" style="margin-top: 15px;"></div>
+        </div>
+    </div>
+
+    <!-- 图片放大查看模态框 -->
+    <div id="image-modal" class="image-modal" onclick="closeImageModal()">
+        <div class="image-modal-content" onclick="event.stopPropagation()">
+            <button class="image-modal-close" onclick="closeImageModal()">×</button>
+            <img id="modal-image" src="" alt="">
+            <div class="image-modal-info">
+                <h4 id="modal-student-name"></h4>
+                <p id="modal-student-info"></p>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>📚 学生图片上传与点评系统</h1>
+            <p>学生上传作品，教师在线点评打分</p>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('upload')">📤 学生上传</button>
+            <button class="tab" onclick="switchTab('gallery')">🖼️ 作品展示</button>
+        </div>
+        
+        <div class="content">
+            <!-- 学生上传区域 -->
+            <div id="upload-tab" class="tab-content active">
+                <div id="upload-alert"></div>
+                
+                <form id="upload-form">
+                    <div class="student-info-display">
+                        <div class="info-item">
+                            <span class="info-label">学生姓名：</span>
+                            <span class="info-value" id="display-student-name">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">学号：</span>
+                            <span class="info-value" id="display-student-id">-</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 隐藏的输入框用于表单提交 -->
+                    <input type="hidden" id="student-name" name="studentName">
+                    <input type="hidden" id="student-id" name="studentId">
+                    
+                    <div class="upload-area" id="upload-area">
+                        <div class="upload-icon">📷</div>
+                        <h3>点击或拖拽上传图片</h3>
+                        <p>支持 JPG、PNG、GIF、WebP 格式，最大 10MB</p>
+                        <input type="file" id="image-input" name="image" accept="image/*" style="display: none;">
+                    </div>
+                    
+                    <button type="submit" class="btn" id="upload-btn">
+                        <span id="upload-text">📤 上传图片</span>
+                        <div id="upload-spinner" class="spinner" style="display: none;"></div>
+                    </button>
+                </form>
+            </div>
+            
+            <!-- 公共作品展示区域 -->
+            <div id="gallery-tab" class="tab-content">
+                <div id="gallery-alert"></div>
+                
+                <div class="gallery-header">
+                    <h3>📖 所有学生作品展示</h3>
+                    <p>查看所有上传的图片作品</p>
+                </div>
+                
+                <div id="loading" class="loading">
+                    <div class="spinner"></div>
+                    <p>正在加载图片...</p>
+                </div>
+                
+                <div id="images-container" class="images-grid" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let currentImages = [];
+        let userRole = null;
+        let userName = null;
+        
+        // 页面加载时检查身份验证
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuthentication();
+            initializeEventListeners();
+        });
+        
+        // 检查身份验证状态
+        function checkAuthentication() {
+            const savedAuth = localStorage.getItem('studentAuth');
+            
+            if (savedAuth) {
+                try {
+                    const authData = JSON.parse(savedAuth);
+                    if (authData.name && authData.studentId) {
+                        userRole = 'student';
+                        userName = authData.name;
+                        hideInviteModal();
+                        updateUserInterface();
+                        return;
+                    }
+                } catch (e) {
+                    localStorage.removeItem('studentAuth');
+                }
+            }
+            
+            showInviteModal();
+        }
+        
+        // 显示邀请码模态框
+        function showInviteModal() {
+            document.getElementById('invite-modal').classList.remove('hidden');
+        }
+        
+        // 隐藏邀请码模态框
+        function hideInviteModal() {
+            document.getElementById('invite-modal').classList.add('hidden');
+        }
+        
+        // 学生登录
+        function studentLogin() {
+            const studentName = document.getElementById('student-name-input').value.trim();
+            const studentId = document.getElementById('student-id-input').value.trim();
+            
+            if (!studentName) {
+                showInviteAlert('请输入学生姓名', 'error');
+                return;
+            }
+            
+            if (!studentId) {
+                showInviteAlert('请输入学号', 'error');
+                return;
+            }
+            
+            // 设置用户信息
+            userRole = 'student';
+            userName = studentName;
+            
+            // 保存到本地存储
+            localStorage.setItem('studentAuth', JSON.stringify({
+                name: studentName,
+                studentId: studentId,
+                timestamp: Date.now()
+            }));
+            
+            hideInviteModal();
+            updateUserInterface();
+            showAlert('gallery-alert', `欢迎学生 ${studentName}！`, 'success');
+        }
+        
+        // 显示邀请码模态框内的提示信息
+        function showInviteAlert(message, type = 'error') {
+            const container = document.getElementById('invite-alert');
+            container.innerHTML = `<div style="color: ${type === 'error' ? '#dc3545' : '#28a745'}; font-weight: 500;">${message}</div>`;
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 3000);
+        }
+        
+        // 更新用户界面
+        function updateUserInterface() {
+            // 更新上传表单中的学生信息
+            updateUploadForm();
+            
+            // 添加退出登录按钮
+            addLogoutButton();
+        }
+        
+        // 更新上传表单中的学生信息
+        function updateUploadForm() {
+            const savedAuth = localStorage.getItem('studentAuth');
+            if (savedAuth) {
+                try {
+                    const authData = JSON.parse(savedAuth);
+                    
+                    // 更新显示信息
+                    document.getElementById('display-student-name').textContent = authData.name;
+                    document.getElementById('display-student-id').textContent = authData.studentId;
+                    
+                    // 更新隐藏输入框的值
+                    document.getElementById('student-name').value = authData.name;
+                    document.getElementById('student-id').value = authData.studentId;
+                } catch (e) {
+                    console.error('Failed to parse student auth data:', e);
+                }
+            }
+        }
+        
+        // 添加退出登录按钮
+        function addLogoutButton() {
+            const header = document.querySelector('.header');
+            if (!document.getElementById('logout-btn')) {
+                const logoutBtn = document.createElement('button');
+                logoutBtn.id = 'logout-btn';
+                logoutBtn.innerHTML = '🚪 退出登录';
+                logoutBtn.style.cssText = `
+                    position: absolute;
+                    top: 20px;
+                    right: 20px;
+                    background: rgba(255,255,255,0.2);
+                    color: white;
+                    border: 1px solid rgba(255,255,255,0.3);
+                    padding: 8px 16px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 0.9em;
+                `;
+                logoutBtn.onclick = logout;
+                header.style.position = 'relative';
+                header.appendChild(logoutBtn);
+            }
+        }
+        
+        // 退出登录
+        function logout() {
+            if (confirm('确定要退出登录吗？')) {
+                localStorage.removeItem('studentAuth');
+                userRole = null;
+                userName = null;
+                document.getElementById('student-name-input').value = '';
+                document.getElementById('student-id-input').value = '';
+                showInviteModal();
+                
+                // 移除退出按钮
+                const logoutBtn = document.getElementById('logout-btn');
+                if (logoutBtn) {
+                    logoutBtn.remove();
+                }
+            }
+        }
+        
+        // 初始化事件监听器
+        function initializeEventListeners() {
+            // 学生登录输入框回车事件
+            document.getElementById('student-name-input').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    studentLogin();
+                }
+            });
+            
+            document.getElementById('student-id-input').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    studentLogin();
+                }
+            });
+            
+            // 初始化文件上传事件
+            initializeUploadEvents();
+        }
+        
+        // 切换标签页
+        function switchTab(tabName) {
+            // 更新标签按钮状态
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // 更新内容区域
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(tabName + '-tab').classList.add('active');
+            
+            // 如果切换到作品展示页面，加载图片
+            if (tabName === 'gallery') {
+                loadImages();
+            }
+        }
+        
+        // 切换用户角色（现在由邀请码系统控制）
+        function toggleUserRole() {
+            // 重新渲染图片列表以显示/隐藏点评功能
+            if (currentImages.length > 0) {
+                renderImages(currentImages);
+                // 重新检查点赞状态
+                checkAllLikeStatus();
+            }
+        }
+        
+        // 检查所有图片的点赞状态
+        async function checkAllLikeStatus() {
+            const savedAuth = localStorage.getItem('studentAuth');
+            if (!savedAuth) return;
+            
+            try {
+                const authData = JSON.parse(savedAuth);
+                const studentId = authData.studentId;
+                
+                for (const image of currentImages) {
+                    await checkLikeStatus(image.id, studentId);
+                }
+            } catch (e) {
+                console.error('Failed to check like status:', e);
+            }
+        }
+        
+        // 检查单个图片的点赞状态
+        async function checkLikeStatus(imageId, studentId) {
+            try {
+                const response = await fetch(`/api/like-status/${imageId}/${studentId}`);
+                
+                // 检查响应类型
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    console.warn(`检查点赞状态失败 - 服务器返回了非JSON响应: ${response.status} ${response.statusText}`);
+                    return;
+                }
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    const likeBtn = document.getElementById(`like-btn-${imageId}`);
+                    if (likeBtn) {
+                        if (result.liked) {
+                            likeBtn.classList.add('liked');
+                            likeBtn.querySelector('span:last-child').textContent = '已赞';
+                        } else {
+                            likeBtn.classList.remove('liked');
+                            likeBtn.querySelector('span:last-child').textContent = '点赞';
+                        }
+                    }
+                } else {
+                    console.warn(`检查点赞状态失败 - HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                console.error('Check like status error:', error);
+            }
+        }
+        
+        // 切换点赞状态
+        async function toggleLike(imageId) {
+            const savedAuth = localStorage.getItem('studentAuth');
+            if (!savedAuth) {
+                showAlert('gallery-alert', '请先登录', 'error');
+                return;
+            }
+            
+            try {
+                const authData = JSON.parse(savedAuth);
+                const likeBtn = document.getElementById(`like-btn-${imageId}`);
+                const isLiked = likeBtn.classList.contains('liked');
+                
+                if (isLiked) {
+                     // 取消点赞
+                     const response = await fetch('/api/like', {
+                         method: 'DELETE',
+                         headers: {
+                             'Content-Type': 'application/json'
+                         },
+                         body: JSON.stringify({
+                             imageId: imageId,
+                             studentId: authData.studentId
+                         })
+                     });
+                     
+                     // 检查响应类型
+                     const contentType = response.headers.get('content-type');
+                     if (!contentType || !contentType.includes('application/json')) {
+                         throw new Error(`服务器返回了非JSON响应: ${response.status} ${response.statusText}`);
+                     }
+                     
+                     if (response.ok) {
+                         const result = await response.json();
+                         likeBtn.classList.remove('liked');
+                         likeBtn.querySelector('span:last-child').textContent = '点赞';
+                         updateLikeCount(imageId, -1);
+                         showAlert('gallery-alert', '取消点赞成功', 'success');
+                     } else {
+                         const result = await response.json();
+                         showAlert('gallery-alert', result.error || '取消点赞失败', 'error');
+                     }
+                } else {
+                     // 点赞
+                     const response = await fetch('/api/like', {
+                         method: 'POST',
+                         headers: {
+                             'Content-Type': 'application/json'
+                         },
+                         body: JSON.stringify({
+                             imageId: imageId,
+                             studentName: authData.name,
+                             studentId: authData.studentId
+                         })
+                     });
+                     
+                     // 检查响应类型
+                     const contentType = response.headers.get('content-type');
+                     if (!contentType || !contentType.includes('application/json')) {
+                         throw new Error(`服务器返回了非JSON响应: ${response.status} ${response.statusText}`);
+                     }
+                     
+                     if (response.ok) {
+                         const result = await response.json();
+                         likeBtn.classList.add('liked');
+                         likeBtn.querySelector('span:last-child').textContent = '已赞';
+                         updateLikeCount(imageId, 1);
+                         showAlert('gallery-alert', '点赞成功', 'success');
+                     } else {
+                         const result = await response.json();
+                         showAlert('gallery-alert', result.error || '点赞失败', 'error');
+                     }
+                 }
+            } catch (error) {
+                console.error('Toggle like error:', error);
+                showAlert('gallery-alert', '网络错误，请重试', 'error');
+            }
+        }
+        
+        // 更新点赞数显示
+        function updateLikeCount(imageId, change) {
+            const likeCountSpan = document.querySelector(`#like-btn-${imageId}`).parentElement.querySelector('.like-count');
+            if (likeCountSpan) {
+                const currentCount = parseInt(likeCountSpan.textContent.match(/\d+/)[0]) || 0;
+                const newCount = Math.max(0, currentCount + change);
+                likeCountSpan.textContent = `${newCount} 个赞`;
+                
+                // 更新内存中的数据
+                const image = currentImages.find(img => img.id === imageId);
+                if (image) {
+                    image.like_count = newCount;
+                }
+            }
+        }
+        
+        // 显示提示信息
+        function showAlert(containerId, message, type = 'success') {
+            const container = document.getElementById(containerId);
+            container.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 5000);
+        }
+        
+        // 初始化文件上传相关事件（在身份验证后调用）
+        function initializeUploadEvents() {
+            const uploadArea = document.getElementById('upload-area');
+            const uploadForm = document.getElementById('upload-form');
+            
+            // 点击上传区域
+            uploadArea.addEventListener('click', () => {
+                let imageInput = document.getElementById('image-input');
+                if (imageInput) {
+                    imageInput.click();
+                } else {
+                    // 如果找不到，创建一个新的
+                    const newInput = document.createElement('input');
+                    newInput.type = 'file';
+                    newInput.id = 'image-input';
+                    newInput.name = 'image';
+                    newInput.accept = 'image/*';
+                    newInput.style.display = 'none';
+                    uploadArea.appendChild(newInput);
+                    newInput.click();
+                    
+                    // 绑定change事件
+                    newInput.addEventListener('change', (e) => {
+                        if (e.target.files.length > 0) {
+                            updateUploadArea(e.target.files[0]);
+                        }
+                    });
+                }
+            });
+            
+            // 拖拽上传
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+            
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+            
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    let imageInput = document.getElementById('image-input');
+                    if (!imageInput) {
+                        // 创建input元素
+                        imageInput = document.createElement('input');
+                        imageInput.type = 'file';
+                        imageInput.id = 'image-input';
+                        imageInput.name = 'image';
+                        imageInput.accept = 'image/*';
+                        imageInput.style.display = 'none';
+                        uploadArea.appendChild(imageInput);
+                    }
+                    imageInput.files = files;
+                    updateUploadArea(files[0]);
+                }
+            });
+            
+            // 初始文件选择事件（使用事件委托）
+            uploadArea.addEventListener('change', (e) => {
+                if (e.target.id === 'image-input' && e.target.files.length > 0) {
+                    updateUploadArea(e.target.files[0]);
+                }
+            });
+            
+            // 表单提交
+            uploadForm.addEventListener('submit', handleUpload);
+        }
+        
+        // 更新上传区域显示
+        function updateUploadArea(file) {
+            const uploadArea = document.getElementById('upload-area');
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                // 保存现有的input元素
+                const existingInput = document.getElementById('image-input');
+                
+                uploadArea.innerHTML = `
+                    <img src="${e.target.result}" style="max-width: 200px; max-height: 200px; border-radius: 10px; margin-bottom: 15px;">
+                    <h3>${file.name}</h3>
+                    <p>文件大小: ${(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                `;
+                
+                // 重新添加input元素
+                if (existingInput) {
+                    uploadArea.appendChild(existingInput);
+                } else {
+                    const newInput = document.createElement('input');
+                    newInput.type = 'file';
+                    newInput.id = 'image-input';
+                    newInput.name = 'image';
+                    newInput.accept = 'image/*';
+                    newInput.style.display = 'none';
+                    uploadArea.appendChild(newInput);
+                }
+            };
+            
+            reader.readAsDataURL(file);
+        }
+        
+        // 处理文件上传
+        async function handleUpload(e) {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            const studentName = document.getElementById('student-name').value;
+            const studentId = document.getElementById('student-id').value;
+            let imageInput = document.getElementById('image-input');
+            
+            // 如果找不到input元素，尝试重新创建
+            if (!imageInput) {
+                const uploadArea = document.getElementById('upload-area');
+                const newInput = document.createElement('input');
+                newInput.type = 'file';
+                newInput.id = 'image-input';
+                newInput.name = 'image';
+                newInput.accept = 'image/*';
+                newInput.style.display = 'none';
+                uploadArea.appendChild(newInput);
+                imageInput = newInput;
+                
+                // 重新绑定事件
+                imageInput.addEventListener('change', (e) => {
+                    if (e.target.files.length > 0) {
+                        updateUploadArea(e.target.files[0]);
+                    }
+                });
+            }
+            
+            const imageFile = imageInput.files[0];
+            
+            // 调试信息
+            console.log('验证信息:', {
+                studentName: studentName,
+                studentId: studentId,
+                imageFile: imageFile,
+                inputElement: imageInput,
+                filesLength: imageInput.files.length
+            });
+            
+            if (!studentName || !studentId || !imageFile) {
+                let errorMsg = '请填写完整信息并选择图片';
+                if (!studentName) errorMsg = '请填写学生姓名';
+                else if (!studentId) errorMsg = '请填写学号';
+                else if (!imageFile) errorMsg = '请选择要上传的图片文件';
+                
+                showAlert('upload-alert', errorMsg, 'error');
+                return;
+            }
+            
+            formData.append('studentName', studentName);
+            formData.append('studentId', studentId);
+            formData.append('image', imageFile);
+            
+            // 显示加载状态
+            const uploadBtn = document.getElementById('upload-btn');
+            const uploadText = document.getElementById('upload-text');
+            const uploadSpinner = document.getElementById('upload-spinner');
+            
+            uploadBtn.disabled = true;
+            uploadText.style.display = 'none';
+            uploadSpinner.style.display = 'inline-block';
+            
+            try {
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showAlert('upload-alert', '图片上传成功！', 'success');
+                    document.getElementById('upload-form').reset();
+                    resetUploadArea();
+                } else {
+                    showAlert('upload-alert', result.error || '上传失败', 'error');
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                showAlert('upload-alert', '网络错误，请重试', 'error');
+            } finally {
+                // 恢复按钮状态
+                uploadBtn.disabled = false;
+                uploadText.style.display = 'inline';
+                uploadSpinner.style.display = 'none';
+            }
+        }
+        
+        // 重置上传区域
+        function resetUploadArea() {
+            const uploadArea = document.getElementById('upload-area');
+            uploadArea.innerHTML = `
+                <div class="upload-icon">📷</div>
+                <h3>点击或拖拽上传图片</h3>
+                <p>支持 JPG、PNG、GIF、WebP 格式，最大 10MB</p>
+                <input type="file" id="image-input" name="image" accept="image/*" style="display: none;">
+            `;
+            
+            // 重新绑定事件监听器
+            const imageInput = document.getElementById('image-input');
+            imageInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    updateUploadArea(e.target.files[0]);
+                }
+            });
+        }
+        
+        // 加载图片列表
+        async function loadImages() {
+            const loading = document.getElementById('loading');
+            const container = document.getElementById('images-container');
+            
+            loading.style.display = 'block';
+            container.style.display = 'none';
+            
+            try {
+                const response = await fetch('/api/images');
+                const images = await response.json();
+                
+                if (response.ok) {
+                    currentImages = images;
+                    renderImages(images);
+                    // 检查点赞状态
+                    checkAllLikeStatus();
+                } else {
+                    showAlert('gallery-alert', '加载图片失败', 'error');
+                }
+            } catch (error) {
+                console.error('Load images error:', error);
+                showAlert('gallery-alert', '网络错误，请重试', 'error');
+            } finally {
+                loading.style.display = 'none';
+                container.style.display = 'grid';
+            }
+        }
+        
+        // 渲染图片列表
+        function renderImages(images) {
+            const container = document.getElementById('images-container');
+            // 使用全局变量 userRole
+            
+            if (images.length === 0) {
+                container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #6c757d;">暂无图片</div>';
+                return;
+            }
+            
+            container.innerHTML = images.map(image => `
+                <div class="image-card">
+                    <img src="/uploads/${image.filename}" alt="${image.original_name}" loading="lazy" onclick="openImageModal('${image.filename}', '${image.student_name}', '${image.student_id}', '${image.upload_time}')">
+                    <div class="card-content">
+                        <div class="student-info">
+                            <div class="student-name">${image.student_name}</div>
+                            <div class="student-id">学号: ${image.student_id}</div>
+                        </div>
+                        <div class="upload-time">上传时间: ${new Date(image.upload_time).toLocaleString()}</div>
+                        
+                        <div class="review-section">
+                            ${image.score !== null ? `
+                                <div class="score-display">分数: ${image.score}分</div>
+                                <div class="comment-display">
+                                    <div class="teacher-info">教师: ${image.teacher_name}</div>
+                                    <div>${image.comment || '无评语'}</div>
+                                    <div style="font-size: 0.8em; color: #6c757d; margin-top: 10px;">
+                                        点评时间: ${new Date(image.review_time).toLocaleString()}
+                                    </div>
+                                </div>
+                            ` : `
+                                <div style="color: #666; font-style: italic;">暂无教师点评</div>
+                            `}
+                            
+                            <div class="like-section">
+                                <button class="like-button" id="like-btn-${image.id}" onclick="toggleLike(${image.id})">
+                                    <span class="like-icon">❤️</span>
+                                    <span>点赞</span>
+                                </button>
+                                <span class="like-count">${image.like_count || 0} 个赞</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // 提交点评
+        async function submitReview(imageId) {
+            const score = document.getElementById(`score-${imageId}`).value;
+            const comment = document.getElementById(`comment-${imageId}`).value;
+            
+            if (userRole !== 'teacher') {
+                showAlert('gallery-alert', '只有教师可以提交点评', 'error');
+                return;
+            }
+            
+            if (!userName) {
+                showAlert('gallery-alert', '教师姓名未设置，请重新登录', 'error');
+                return;
+            }
+            
+            if (!score || score < 0 || score > 100) {
+                showAlert('gallery-alert', '请输入0-100之间的分数', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/review', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        imageId,
+                        teacherName: userName,
+                        score: parseInt(score),
+                        comment
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showAlert('gallery-alert', '点评提交成功！', 'success');
+                    loadImages(); // 重新加载图片列表
+                } else {
+                    showAlert('gallery-alert', result.error || '提交失败', 'error');
+                }
+            } catch (error) {
+                console.error('Submit review error:', error);
+                showAlert('gallery-alert', '网络错误，请重试', 'error');
+            }
+        }
+        
+        // 编辑点评
+        function editReview(imageId) {
+            const image = currentImages.find(img => img.id === imageId);
+            if (!image) return;
+            
+            const card = document.querySelector(`[onclick="editReview(${imageId})"]`).closest('.image-card');
+            const reviewSection = card.querySelector('.review-section');
+            
+            reviewSection.innerHTML = `
+                <div class="score-input">
+                    <label>分数:</label>
+                    <input type="number" id="score-${imageId}" min="0" max="100" value="${image.score}">
+                    <span>分</span>
+                </div>
+                <textarea id="comment-${imageId}" class="comment-input">${image.comment || ''}</textarea>
+                <button class="btn btn-small" onclick="submitReview(${imageId})">更新点评</button>
+                <button class="btn btn-small btn-danger" onclick="deleteImage(${imageId})">删除</button>
+            `;
+        }
+        
+        // 删除图片
+        async function deleteImage(imageId) {
+            if (userRole !== 'teacher') {
+                showAlert('gallery-alert', '只有教师可以删除图片', 'error');
+                return;
+            }
+            
+            if (!confirm('确定要删除这张图片吗？此操作不可恢复。')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/images/${imageId}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showAlert('gallery-alert', '删除成功！', 'success');
+                    loadImages(); // 重新加载图片列表
+                } else {
+                    showAlert('gallery-alert', result.error || '删除失败', 'error');
+                }
+            } catch (error) {
+                console.error('Delete image error:', error);
+                showAlert('gallery-alert', '网络错误，请重试', 'error');
+            }
+        }
+        
+        // 打开图片放大查看模态框
+        function openImageModal(filename, studentName, studentId, uploadTime) {
+            const modal = document.getElementById('image-modal');
+            const modalImage = document.getElementById('modal-image');
+            const modalStudentName = document.getElementById('modal-student-name');
+            const modalStudentInfo = document.getElementById('modal-student-info');
+            
+            // 设置图片源
+            modalImage.src = `/uploads/${filename}`;
+            modalImage.alt = `${studentName}的作品`;
+            
+            // 设置学生信息
+            modalStudentName.textContent = `${studentName}的作品`;
+            modalStudentInfo.textContent = `学号：${studentId} | 上传时间：${new Date(uploadTime).toLocaleString()}`;
+            
+            // 显示模态框
+            modal.classList.add('show');
+            
+            // 阻止页面滚动
+            document.body.style.overflow = 'hidden';
+        }
+        
+        // 关闭图片放大查看模态框
+        function closeImageModal() {
+            const modal = document.getElementById('image-modal');
+            modal.classList.remove('show');
+            
+            // 恢复页面滚动
+            document.body.style.overflow = 'auto';
+        }
+        
+        // 键盘事件处理
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeImageModal();
+            }
+        });
+    </script>
+</body>
+</html>
