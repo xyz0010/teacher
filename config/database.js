@@ -1,9 +1,133 @@
 const isProduction = process.env.VERCEL || process.env.NODE_ENV === 'production';
+const useSupabase = process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY;
 
 let db;
 
-if (isProduction) {
-<<<<<<< HEAD
+if (isProduction && useSupabase) {
+  // 生产环境：使用Supabase
+  const { supabaseDB } = require('./supabase');
+  
+  db = {
+    query: async (text, params = []) => {
+      // 解析SQL查询并转换为Supabase操作
+      const sqlLower = text.toLowerCase().trim();
+      
+      if (sqlLower.startsWith('select')) {
+        return await handleSelectQuery(text, params);
+      } else if (sqlLower.startsWith('insert')) {
+        return await handleInsertQuery(text, params);
+      } else if (sqlLower.startsWith('update')) {
+        return await handleUpdateQuery(text, params);
+      } else if (sqlLower.startsWith('delete')) {
+        return await handleDeleteQuery(text, params);
+      } else if (sqlLower.startsWith('create table')) {
+        // 创建表的操作在Supabase中通过Dashboard完成
+        console.log('Table creation should be done in Supabase Dashboard:', text);
+        return { rows: [] };
+      } else {
+        console.warn('Unsupported SQL query:', text);
+        return { rows: [] };
+      }
+    },
+    
+    initialize: async () => {
+      console.log('Using Supabase database - tables should be created in Supabase Dashboard');
+      console.log('Required tables: student_images, reviews, likes');
+    }
+  };
+  
+  // SQL查询处理函数
+  async function handleSelectQuery(text, params) {
+    const { supabaseDB } = require('./supabase');
+    
+    // 简单的SELECT查询解析
+    if (text.includes('student_images') && text.includes('LEFT JOIN')) {
+      // 获取图片列表with点赞数
+      return await supabaseDB.query('student_images', {
+        select: '*, reviews(*), likes(count)',
+        orderBy: { column: 'upload_time', ascending: false }
+      });
+    } else if (text.includes('student_images')) {
+      return await supabaseDB.query('student_images', {
+        orderBy: { column: 'upload_time', ascending: false }
+      });
+    } else if (text.includes('reviews')) {
+      const imageId = params[0];
+      return await supabaseDB.query('reviews', {
+        where: { image_id: imageId }
+      });
+    } else if (text.includes('likes')) {
+      if (params.length === 2) {
+        return await supabaseDB.query('likes', {
+          where: { image_id: params[0], student_id: params[1] }
+        });
+      }
+      return await supabaseDB.query('likes');
+    }
+    return { rows: [] };
+  }
+  
+  async function handleInsertQuery(text, params) {
+    const { supabaseDB } = require('./supabase');
+    
+    if (text.includes('student_images')) {
+      const data = {
+        student_name: params[0],
+        student_id: params[1],
+        filename: params[2],
+        original_name: params[3],
+        file_url: params[4],
+        file_size: params[5]
+      };
+      return await supabaseDB.insert('student_images', data);
+    } else if (text.includes('reviews')) {
+      const data = {
+        image_id: params[0],
+        teacher_name: params[1],
+        score: params[2],
+        comment: params[3]
+      };
+      return await supabaseDB.insert('reviews', data);
+    } else if (text.includes('likes')) {
+      const data = {
+        image_id: params[0],
+        student_name: params[1],
+        student_id: params[2]
+      };
+      return await supabaseDB.insert('likes', data);
+    }
+    return { rows: [] };
+  }
+  
+  async function handleUpdateQuery(text, params) {
+    const { supabaseDB } = require('./supabase');
+    
+    if (text.includes('reviews')) {
+      const data = {
+        teacher_name: params[0],
+        score: params[1],
+        comment: params[2]
+      };
+      const where = { image_id: params[3] };
+      return await supabaseDB.update('reviews', data, where);
+    }
+    return { rows: [] };
+  }
+  
+  async function handleDeleteQuery(text, params) {
+    const { supabaseDB } = require('./supabase');
+    
+    if (text.includes('likes')) {
+      const where = { image_id: params[0], student_id: params[1] };
+      return await supabaseDB.delete('likes', where);
+    } else if (text.includes('student_images')) {
+      const where = { id: params[0] };
+      return await supabaseDB.delete('student_images', where);
+    }
+    return { rows: [] };
+  }
+  
+} else if (isProduction) {
   // 生产环境：使用PostgreSQL (Railway/Vercel Postgres)
   const { Pool } = require('pg');
   
@@ -13,14 +137,6 @@ if (isProduction) {
   db = new Pool({
     connectionString: connectionString,
     ssl: connectionString && connectionString.includes('localhost') ? false : {
-=======
-  // 生产环境：使用PostgreSQL (Vercel Postgres)
-  const { Pool } = require('pg');
-  
-  db = new Pool({
-    connectionString: process.env.POSTGRES_URL,
-    ssl: {
->>>>>>> f1bbd81d1856cdcd6d9b7bb82c3d75b82f8009ae
       rejectUnauthorized: false
     }
   });

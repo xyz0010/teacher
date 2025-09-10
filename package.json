@@ -9,13 +9,10 @@
     "dev": "node server.js",
     "vercel-build": "npm install"
   },
-<<<<<<< HEAD
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=8.0.0"
   },
-=======
->>>>>>> f1bbd81d1856cdcd6d9b7bb82c3d75b82f8009ae
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
     "@vercel/blob": "^1.1.1",
@@ -40,8 +37,4 @@
   ],
   "author": "Teacher",
   "license": "MIT"
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> f1bbd81d1856cdcd6d9b7bb82c3d75b82f8009ae

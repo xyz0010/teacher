@@ -1,8 +1,59 @@
 const isProduction = process.env.VERCEL || process.env.NODE_ENV === 'production';
+const useSupabase = process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY;
 
 let storage;
 
-if (isProduction) {
+if (isProduction && useSupabase) {
+  // 生产环境：使用Supabase存储
+  const { supabaseDB } = require('./supabase');
+  
+  storage = {
+    // 上传文件
+    upload: async (file, filename) => {
+      try {
+        const bucket = 'student-images';
+        const path = `uploads/${Date.now()}-${filename}`;
+        
+        const result = await supabaseDB.uploadFile(bucket, path, file);
+        
+        return {
+          success: result.success,
+          url: result.url,
+          filename: result.filename || filename,
+          size: file.size || 0,
+          error: result.error
+        };
+      } catch (error) {
+        console.error('Supabase upload error:', error);
+        return {
+          success: false,
+          error: error.message
+        };
+      }
+    },
+    
+    // 删除文件
+    delete: async (filename) => {
+      try {
+        const bucket = 'student-images';
+        const path = `uploads/${filename}`;
+        
+        const result = await supabaseDB.deleteFile(bucket, path);
+        return result;
+      } catch (error) {
+        console.error('Supabase delete error:', error);
+        return { success: false, error: error.message };
+      }
+    },
+    
+    // 获取文件URL
+    getUrl: (filename) => {
+      // Supabase会返回完整的URL
+      return filename;
+    }
+  };
+  
+} else if (isProduction) {
   // 生产环境：使用Vercel Blob存储
   const { put, del } = require('@vercel/blob');
   
