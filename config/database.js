@@ -3,6 +3,7 @@ const isProduction = process.env.VERCEL || process.env.NODE_ENV === 'production'
 let db;
 
 if (isProduction) {
+<<<<<<< HEAD
   // 生产环境：使用PostgreSQL (Railway/Vercel Postgres)
   const { Pool } = require('pg');
   
@@ -12,6 +13,14 @@ if (isProduction) {
   db = new Pool({
     connectionString: connectionString,
     ssl: connectionString && connectionString.includes('localhost') ? false : {
+=======
+  // 生产环境：使用PostgreSQL (Vercel Postgres)
+  const { Pool } = require('pg');
+  
+  db = new Pool({
+    connectionString: process.env.POSTGRES_URL,
+    ssl: {
+>>>>>>> f1bbd81d1856cdcd6d9b7bb82c3d75b82f8009ae
       rejectUnauthorized: false
     }
   });
