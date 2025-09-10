@@ -1314,7 +1314,12 @@
                     document.getElementById('upload-form').reset();
                     resetUploadArea();
                 } else {
-                    showAlert('upload-alert', result.error || '上传失败', 'error');
+                    // 特殊处理云存储配置中的情况
+                    if (response.status === 501 && result.code === 'CLOUD_STORAGE_PENDING') {
+                        showAlert('upload-alert', result.error, 'info');
+                    } else {
+                        showAlert('upload-alert', result.error || '上传失败', 'error');
+                    }
                 }
             } catch (error) {
                 console.error('Upload error:', error);

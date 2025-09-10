@@ -120,46 +120,66 @@ app.post('/api/verify-invite', (req, res) => {
 });
 
 // 学生上传图片
-app.post('/api/upload', upload.single('image'), (req, res) => {
+app.post('/api/upload', (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ error: '请选择要上传的图片' });
+    // 检查是否在Vercel环境
+    if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+      return res.status(501).json({ 
+        error: '图片上传功能正在配置云存储服务，请稍后再试。\n\n当前可以使用的功能：\n• 学生登录\n• 查看作品展示\n• 点赞互动',
+        code: 'CLOUD_STORAGE_PENDING'
+      });
     }
     
-    const { studentName, studentId } = req.body;
-    
-    if (!studentName || !studentId) {
-      return res.status(400).json({ error: '请填写学生姓名和学号' });
-    }
-    
-    const stmt = db.prepare(`INSERT INTO student_images 
-      (student_name, student_id, filename, original_name, file_path, file_size) 
-      VALUES (?, ?, ?, ?, ?, ?)`);
-    
-    stmt.run([
-      studentName,
-      studentId,
-      req.file.filename,
-      req.file.originalname,
-      req.file.path,
-      req.file.size
-    ], function(err) {
+    // 本地开发环境的原有逻辑
+    const multerUpload = upload.single('image');
+    multerUpload(req, res, (err) => {
       if (err) {
-        console.error(err);
-        return res.status(500).json({ error: '数据库保存失败' });
+        console.error('Multer error:', err);
+        return res.status(400).json({ error: '文件上传失败' });
       }
       
-      res.json({
-        message: '图片上传成功',
-        imageId: this.lastID,
-        filename: req.file.filename
+      if (!req.file) {
+        return res.status(400).json({ error: '请选择要上传的图片' });
+      }
+      
+      const { studentName, studentId } = req.body;
+      
+      if (!studentName || !studentId) {
+        return res.status(400).json({ error: '请填写学生姓名和学号' });
+      }
+      
+      const stmt = db.prepare(`INSERT INTO student_images 
+        (student_name, student_id, filename, original_name, file_path, file_size) 
+        VALUES (?, ?, ?, ?, ?, ?)`);
+      
+      stmt.run([
+        studentName,
+        studentId,
+        req.file.filename,
+        req.file.originalname,
+        req.file.path,
+        req.file.size
+      ], function(err) {
+        if (err) {
+          console.error(err);
+          return res.status(500).json({ error: '数据库保存失败' });
+        }
+        
+        res.json({
+          message: '图片上传成功',
+          imageId: this.lastID,
+          filename: req.file.filename
+        });
       });
+      
+      stmt.finalize();
     });
-    
-    stmt.finalize();
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: '上传失败' });
+    console.error('Upload error:', error);
+    res.status(500).json({ 
+      error: '服务器错误，请稍后重试',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
